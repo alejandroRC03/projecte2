@@ -22,9 +22,6 @@ volumes:
 version: '3'
 services:
   db:
-	image: mysql:5.7
-	enviroment:
-  	MYSQL_ROOT_PASSWORD: password
   phpmyadmin:
 	image: phpmyadmin/phpmyadmin
 	environment:
