@@ -1,3 +1,3 @@
 Projecte 2 ASIX
 Autores:
-⫷☬ᗩᒪEᒍᗩᑎᗪᖇO☬⫸ y ☠︎︎Pau☠︎︎
+Alejandro Rodríguez y Pau España
