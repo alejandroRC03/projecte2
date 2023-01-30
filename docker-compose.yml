@@ -52,3 +52,5 @@ services:
   	- "docker"
 	environment:
   	- JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+        entrypoint: /bin/tini -- /usr/local/bin/jenkins.sh
+        command: --httpPort=8080 --ajp13Port=-1 --prefix=/jenkins
