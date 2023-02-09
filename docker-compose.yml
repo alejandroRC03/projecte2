@@ -1,56 +1,58 @@
 version: '3'
 services:
-  db:
-	image: mysql:latest
-	volumes:
-  	- db_data:/var/lib/mysql
-	environment:
-  	MYSQL_ROOT_PASSWORD: paulejo
-  	MYSQL_USER: dev
-  	MYSQL_PASSWORD: paulejo
-  	MYSQL_DATABASE: dev
-	ports:
-  	- "3306:3306"
-	command: --default-authentication-plugin=mysql_native_password
-	init:
-  	- "./var/lib/mysql"
-	restart: always
+ db:
+  image: mysql:latest
 volumes:
-  db_data:
+- db_data:/var/lib/mysql
+environment:
+ MYSQL_ROOT_PASSWORD: paulejo
+ MYSQL_USER: dev
+ MYSQL_PASSWORD: paulejo
+ MYSQL_DATABASE: dev
+ports:
+- "3306:3306"
+command: --default-authentication-plugin=mysql_native_password
+init:
+ - "./var/lib/mysql"
+restart: always
+volumes:
+ db_data:
 
-
-version: '3'
-services:
-  db:
-    image: mysql:5.7
-    enviroment:
-      MYSQL_ROOT_PASSWORD: password
-  phpmyadmin:
-	image: phpmyadmin/phpmyadmin
-	environment:
-  	- PMA_HOST=dba
-  	- PMA_PORT=3306
-  	- PMA_USER=root
-  	- PMA_PASSWORD=root_password
-	ports:
-  	- "8091:80"
-	depends_on:
-  	- db
 
 
 version: '3'
 services:
-  jenkins:
-	image: jenkins/jenkins:lts-jdk11
-	ports:
-  	- "8011:8080"
-  	- "50000:50000"
-	volumes:
-  	- "inicio:/var/jenkins_inicio"
-  	- "/var/run/docker.sock:/var/run/docker.sock"
-	depends_on:
-  	- "docker"
-	environment:
-  	- JAVA_OPTS=-Djenkins.install.runSetupWizard=false
-        entrypoint: /bin/tini -- /usr/local/bin/jenkins.sh
-        command: --httpPort=8080 --ajp13Port=-1 --prefix=/jenkins
+ db:
+   image: mysql:5.7
+   enviroment:
+     MYSQL_ROOT_PASSWORD: password
+ phpmyadmin:
+image: phpmyadmin/phpmyadmin
+environment:
+ - PMA_HOST=dba
+ - PMA_PORT=3306
+ - PMA_USER=root
+ - PMA_PASSWORD=root_password
+ports:
+ - "8091:80"
+depends_on:
+ - db
+
+
+
+version: '3'
+services:
+jenkins:
+image: jenkins/jenkins:lts-jdk11
+ports:
+ - "8011:8080"
+- "50000:50000"
+volumes:
+ - "inicio:/var/jenkins_inicio"
+ - "/var/run/docker.sock:/var/run/docker.sock"
+depends_on:
+ - "docker"
+environment:
+ - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+       entrypoint: /bin/tini -- /usr/local/bin/jenkins.sh
+       command: --httpPort=8080 --ajp13Port=-1 --prefix=/jenkins
