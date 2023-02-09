@@ -1,7 +1,7 @@
 FROM orboan/dind
 MAINTAINER Pau España y Alejandro Rodriguez
 
-ARG language=ca_ESP
+ARG language=ca_ES
 
 #Variables de entorno mysql
 ENV MYSQL_ROOT_PASSWORD=paulejo
@@ -32,7 +32,7 @@ ENV \
     
 # Layer cleanup script
 COPY resources/scripts/*.sh  /usr/bin/
-RUN chmod +x /usr/bin/clean-layer.sh /usr/bin/fix-permissions.sh
+RUN chmod +x usr/bin/*.sh
 
 
 # Make folders
@@ -53,54 +53,68 @@ RUN \
     fi \
     && clean-layer.sh
 
+#Instalacion basica
+RUN \
+  apt update -y && \
+  if ! which gpg; then \
+       apt-get install -y --no-install-recommends gnupg; \
+  fi; \
+  clean-layer.sh
+
+
+#Instalación de programas
 RUN \
   apt update -y && \ 
   DEBIAN_FRONTEND=noninteractive \
   apt-get install -y --no-install-recommends \
   apt-transport-https \
+  ca-certificates \
+  build-essential \
+  software-properties-common \
   curl \
   apt-utils \
   ssh \
-  pyhton3 \
-  sdkman \
-  pip \
-  gradle cli \
-  maven cli \
-  github cli \
+  #pyhton3.5 \
+  #python3-pip \
+  gradle \
+  maven \
   nodejs \
+  openssl \
+  vim \
+  bash-completion \
+  iputils-ping \
   npm \
   openjdk-11-jdk \
   git \
-  wget \
-  java 11 \
-  mysql server 
+  wget && \
+  clean-layer.sh 
 
 #Instalacion docker-compose
-sudo curl -L "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
+#RUN curl -L "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+#RUN chmod +x /usr/local/bin/docker-compose
 
 
 # Instalamos supervisor
-RUN apt-get update && \
-    apt-get install -y supervisor
+RUN  apt install -y supervisor
 
 # Instalamos el servidor ssh
-RUN apt-get install -y openssh-server
+RUN apt update -y && \
+    apt install -y openssh-server
 
 # Add PHPMyAdmin
-RUN curl -L -o /tmp/phpmyadmin.tar.gz https://files.phpmyadmin.net/phpMyAdmin/5.0.2/phpMyAdmin-5.0.2-all-languages.tar.gz \
-    && tar xvf /tmp/phpmyadmin.tar.gz -C /var/www/ \
-    && rm /tmp/phpmyadmin.tar.gz \
-    && mv /var/www/phpMyAdmin-5.0.2-all-languages /var/www/phpmyadmin \
-    && curl -L -o /var/www/phpmyadmin/config.inc.php https://raw.githubusercontent.com/phpmyadmin/docker/master/config.inc.php
+#RUN curl -L -o /tmp/phpmyadmin.tar.gz https://files.phpmyadmin.net/phpMyAdmin/5.0.2/phpMyAdmin-5.0.2-all-languages.tar.gz \
+#    && tar xvf /tmp/phpmyadmin.tar.gz -C /var/www/ \
+#    && rm /tmp/phpmyadmin.tar.gz \
+#    && mv /var/www/phpMyAdmin-5.0.2-all-languages /var/www/phpmyadmin \
+#    && curl -L -o /var/www/phpmyadmin/config.inc.php https://raw.githubusercontent.com/phpmyadmin/docker/master/config.inc.php
 
 # Instalamos VS Code web
-RUN apt-get install -y curl && \
+RUN apt install -y curl && \
     curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg && \
     install -o root -g root -m 644 microsoft.gpg /etc/apt/trusted.gpg.d/ && \
     echo "deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main" > /etc/apt/sources.list.d/vscode.list && \
-    apt-get update && \
-    apt-get install -y code-oss
+    apt update && \
+    apt install -y code-oss
 
 # Instalamos Python 3 y pip
 RUN apt-get install -y python3 && \
@@ -149,8 +163,11 @@ EXPOSE 2222
 # Exponemos el puerto 8081 para acceder a VSCode
 EXPOSE 8081
 
+EXPOSE 3306
+
 # Copiamos el archivo de configuración de supervisor
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY resources/etc/supervisor/*.conf  /resources/etc/supervisor/conf.d
+RUN chmod +x /resources/etc/supervisor/supervisord.conf
 
 # Establecemos el comando a ejecutar al iniciar el contenedor
 CMD ["/usr/bin/supervisord"]
