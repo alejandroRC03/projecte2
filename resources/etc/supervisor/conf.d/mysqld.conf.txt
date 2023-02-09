@@ -1,8 +1,0 @@
-[program:mysqld]
-directory=/var/lib/mysql/
-user=mysql
-command=docker-entrypoint.sh mysqld
-autostart=true
-autorestart=false
-redirect_stderr=true
-startsecs=0
