@@ -3,12 +3,6 @@ MAINTAINER Pau España y Alejandro Rodriguez
 
 ARG language=ca_ES
 
-#Variables de entorno mysql
-ENV MYSQL_ROOT_PASSWORD=paulejo
-ENV MYSQL_DATABASE=bbdduniversitat
-ENV MYSQL_USER=dev
-ENV MYSQL_PASSWORD=dev_password
-
 ENV \
     USER=alumne \
     PASSWORD=alumne \
@@ -63,7 +57,7 @@ RUN \
 
 
 #Instalación de programas
-RUN \
+RUN \ 
   apt update -y && \ 
   DEBIAN_FRONTEND=noninteractive \
   apt-get install -y --no-install-recommends \
@@ -74,8 +68,6 @@ RUN \
   curl \
   apt-utils \
   ssh \
-  #pyhton3.5 \
-  #python3-pip \
   gradle \
   maven \
   nodejs \
@@ -89,18 +81,14 @@ RUN \
   wget && \
   clean-layer.sh 
 
-#Instalacion docker-compose
-#RUN curl -L "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-#RUN chmod +x /usr/local/bin/docker-compose
-
 
 # Instalamos supervisor
-RUN  apt install -y supervisor
+RUN apt install -y supervisor
 
-# Instalamos el servidor ssh
+#Instalamos el servidor SSH
+
 RUN apt update -y && \
     apt install -y openssh-server
-
 # Add PHPMyAdmin
 #RUN curl -L -o /tmp/phpmyadmin.tar.gz https://files.phpmyadmin.net/phpMyAdmin/5.0.2/phpMyAdmin-5.0.2-all-languages.tar.gz \
 #    && tar xvf /tmp/phpmyadmin.tar.gz -C /var/www/ \
@@ -108,48 +96,67 @@ RUN apt update -y && \
 #    && mv /var/www/phpMyAdmin-5.0.2-all-languages /var/www/phpmyadmin \
 #    && curl -L -o /var/www/phpmyadmin/config.inc.php https://raw.githubusercontent.com/phpmyadmin/docker/master/config.inc.php
 
-# Instalamos VS Code web
-RUN apt install -y curl && \
-    curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg && \
+
+# Descargar VS Code versión web
+RUN apt-get update && apt-get install -y curl gpg
+RUN curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg && \
     install -o root -g root -m 644 microsoft.gpg /etc/apt/trusted.gpg.d/ && \
-    echo "deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main" > /etc/apt/sources.list.d/vscode.list && \
-    apt update && \
-    apt install -y code-oss
+    rm microsoft.gpg
+RUN echo "deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main" > /etc/apt/sources.list.d/vscode.list
+RUN apt-get update && apt-get install -y code
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN curl -fsSL https://code-server.dev/install.sh | sh
+
+# Instalar Git y las CLI de Github y Gitlab
+RUN apt-get install -y git && \
+    curl -LJO https://github.com/github/hub/releases/download/v2.14.2/hub-linux-amd64-2.14.2.tgz && \
+    tar xvzf hub-linux-amd64-2.14.2.tgz && \
+    cd hub-linux-amd64-2.14.2 && \
+    ./install && \
+    cd ../ && \
+    rm -rf hub-linux-amd64-2.14.2 && \
+    rm hub-linux-amd64-2.14.2.tgz
+
+# Configurar el servidor ssh
+#RUN mkdir /var/run/sshd && \
+#    echo 'root:root' | chpasswd && \
+#    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+#    sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
+
+
 
 # Instalamos Python 3 y pip
-RUN apt-get install -y python3 && \
-    apt-get install -y python3-pip
+RUN apt-get update && apt-get install -y python3 python3-pip
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Instalamos Node.js y npm
 RUN apt-get install -y nodejs && \
     apt-get install -y npm
 
-# Instalamos SDKMAN
-RUN curl -s "https://get.sdkman.io" | bash
-
 # Instalamos el cliente de Docker
-RUN apt-get install -y docker.io
+RUN apt-get update && apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
+RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+RUN add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+RUN apt-get update && apt-get install -y docker-ce-cli
 
-# Instalamos Docker Compose
-RUN apt-get install -y docker-compose
 
 # Instalamos el cliente de MySQL
-RUN apt-get install -y mysql-client
+RUN apt-get update && apt-get install -y mysql-client
 
-# Instalamos Git
-RUN apt-get install -y git
-
-# Instalamos el cliente de GitHub
-RUN apt-get install -y hub
+#Variables de entorno mysql
+ENV MYSQL_ROOT_PASSWORD=paulejo
+ENV MYSQL_DATABASE=bbdduniversitat
+ENV MYSQL_USER=dev
+ENV MYSQL_PASSWORD=dev_password
 
 # Instalamos Maven CLI
-RUN apt-get install -y maven
+RUN apt-get update && apt-get install -y maven
 
 # Instalamos Gradle CLI
-RUN apt-get install -y gradle
+RUN apt-get update && apt-get install -y gradle
 
 # Creamos un volumen para el directorio $HOME del usuario dev
-VOLUME $HOME
+VOLUME /home/dev
 
 # Creamos un volumen para /var/lib/docker
 VOLUME /var/lib/docker
@@ -157,17 +164,22 @@ VOLUME /var/lib/docker
 # Creamos un volumen para el socket de Docker
 VOLUME /var/run/docker.sock
 
-# Exponemos el puerto 2222 para acceder a ssh
-EXPOSE 2222
+# Exponemos los puertos
+EXPOSE 2222:22 8081 3306 9001 443
 
-# Exponemos el puerto 8081 para acceder a VSCode
-EXPOSE 8081
+#Expone el puerto code-server
+EXPOSE 8080
 
-EXPOSE 3306
+COPY modprobe startup.sh /usr/local/bin/
+COPY logger.sh /opt/bash-utils/logger.sh 
+
 
 # Copiamos el archivo de configuración de supervisor
-COPY resources/etc/supervisor/*.conf  /resources/etc/supervisor/conf.d
-RUN chmod +x /resources/etc/supervisor/supervisord.conf
 
-# Establecemos el comando a ejecutar al iniciar el contenedor
-CMD ["/usr/bin/supervisord"]
+COPY resources/etc/supervisor /etc/supervisor
+
+RUN chmod +x /usr/local/bin/startup.sh /usr/local/bin/modprobe
+
+ENTRYPOINT [ "code-server" ]
+
+CMD [ "code" ]
