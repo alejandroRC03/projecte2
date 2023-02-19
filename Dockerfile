@@ -1,6 +1,9 @@
 FROM orboan/dind
 MAINTAINER Pau España y Alejandro Rodriguez
 
+LABEL version="1.0"
+LABEL description="Proyecto 2"
+
 ARG language=ca_ES
 
 ENV \
@@ -65,6 +68,7 @@ RUN \
   ca-certificates \
   build-essential \
   software-properties-common \
+  libcurl4 \
   curl \
   apt-utils \
   ssh \
@@ -76,30 +80,55 @@ RUN \
   bash-completion \
   iputils-ping \
   npm \
-  openjdk-11-jdk \
+  wget \
+  openssl \
   git \
-  wget && \
+  zip \
+  gzip \
+  unzip \
+  bzip2 \
+  lzop \
+  sudo && \
   clean-layer.sh 
 
 
-# Instalamos supervisor
-RUN apt install -y supervisor
-
-#Instalamos el servidor SSH
-
-RUN apt update -y && \
-    apt install -y openssh-server
-# Add PHPMyAdmin
-#RUN curl -L -o /tmp/phpmyadmin.tar.gz https://files.phpmyadmin.net/phpMyAdmin/5.0.2/phpMyAdmin-5.0.2-all-languages.tar.gz \
-#    && tar xvf /tmp/phpmyadmin.tar.gz -C /var/www/ \
-#    && rm /tmp/phpmyadmin.tar.gz \
-#    && mv /var/www/phpMyAdmin-5.0.2-all-languages /var/www/phpmyadmin \
-#    && curl -L -o /var/www/phpmyadmin/config.inc.php https://raw.githubusercontent.com/phpmyadmin/docker/master/config.inc.php
+RUN \
+    apt update -y && \
+    apt install -y supervisor openssh-server apache2 mariadb-server && \
+    clean-layer.sh
 
 
-# Descargar VS Code versión web
+#Instalacion de las dependencias necessarias
+RUN apt-get update && apt-get install -y \
+    supervisor \
+    openssh-server \
+    python3 \
+    python3-pip \
+    nodejs \
+    npm \
+    #sdkman \
+    docker.io \
+    docker-compose \
+    mysql-client \
+    git \
+    #github-cli \
+    maven \
+    gradle
+
+# Configurem SSH
+RUN mkdir /var/run/sshd \ 
+RUN echo 'root:root' | chpasswd 
+RUN sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config 
+
+# SSH login fix. Otherwise user is kicked off after login
+RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
+
+ENV NOTVISIBLE "in users profile"
+RUN echo "export VISIBLE=now" >> /etc/profile
+
+#Descargar VS Code versión web
 RUN apt-get update && apt-get install -y curl gpg
-RUN curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg && \
+RUN curl https://code.visualstudio.com/docs/?dv=linux64_deb && \
     install -o root -g root -m 644 microsoft.gpg /etc/apt/trusted.gpg.d/ && \
     rm microsoft.gpg
 RUN echo "deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main" > /etc/apt/sources.list.d/vscode.list
@@ -107,8 +136,9 @@ RUN apt-get update && apt-get install -y code
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 RUN curl -fsSL https://code-server.dev/install.sh | sh
 
+
 # Instalar Git y las CLI de Github y Gitlab
-RUN apt-get install -y git && \
+RUN apt-get update && apt-get install -y git && \
     curl -LJO https://github.com/github/hub/releases/download/v2.14.2/hub-linux-amd64-2.14.2.tgz && \
     tar xvzf hub-linux-amd64-2.14.2.tgz && \
     cd hub-linux-amd64-2.14.2 && \
@@ -117,13 +147,9 @@ RUN apt-get install -y git && \
     rm -rf hub-linux-amd64-2.14.2 && \
     rm hub-linux-amd64-2.14.2.tgz
 
-# Configurar el servidor ssh
-#RUN mkdir /var/run/sshd && \
-#    echo 'root:root' | chpasswd && \
-#    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
-#    sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
 
-
+# Instalar OpenSSL
+RUN apt-get update && apt-get install -y openssl
 
 # Instalamos Python 3 y pip
 RUN apt-get update && apt-get install -y python3 python3-pip
@@ -149,6 +175,12 @@ ENV MYSQL_DATABASE=bbdduniversitat
 ENV MYSQL_USER=dev
 ENV MYSQL_PASSWORD=dev_password
 
+#Copiar startup.sh
+COPY startup.sh /usr/local/bin/
+
+#Copiar logger.sh
+COPY logger.sh /opt/bash-utils/logger.sh 
+
 # Instalamos Maven CLI
 RUN apt-get update && apt-get install -y maven
 
@@ -165,21 +197,17 @@ VOLUME /var/lib/docker
 VOLUME /var/run/docker.sock
 
 # Exponemos los puertos
-EXPOSE 2222:22 8081 3306 9001 443
+EXPOSE 8081 3306 9001 443 80
 
-#Expone el puerto code-server
-EXPOSE 8080
-
-COPY modprobe startup.sh /usr/local/bin/
-COPY logger.sh /opt/bash-utils/logger.sh 
-
+# Configurem SSH
+EXPOSE 2222
 
 # Copiamos el archivo de configuración de supervisor
-
-COPY resources/etc/supervisor /etc/supervisor
-
+COPY supervisord.conf /etc/supervisor
 RUN chmod +x /usr/local/bin/startup.sh /usr/local/bin/modprobe
+COPY docker-compose.yml /etc/docker-compose
 
-ENTRYPOINT [ "code-server" ]
+CMD ["/usr/sbin/sddd", "-D"]
+CMD ["/usr/local/bin/startup.sh"]
 
-CMD [ "code" ]
+CMD ["tail", "-f", "/dev/null"]
