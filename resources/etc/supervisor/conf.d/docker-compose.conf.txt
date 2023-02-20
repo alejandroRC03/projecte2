@@ -1,7 +1,0 @@
-[program:docker-compose]
-command=docker-compose
-autostart=true
-autorestart=true
-stderr_logfile=/var/log/docker-compose.err.log
-stdout_logfile=/var/log/docker-compose.out.log
-
