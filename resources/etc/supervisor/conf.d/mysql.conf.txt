@@ -1,0 +1,8 @@
+[program:mysql]
+command=/usr/sbin/mysqld --basedir=/usr
+autostart=true
+autorestart=true
+startretries=3
+stderr_logfile=/var/log/mysql/mysql.err.log
+stdout_logfile=/var/log/mysql/mysql.out.log
+user=root
